@@ -1,0 +1,7 @@
+sqoop import-all-tables --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba  --password cloudera --compress --compression-codec snappy --warehouse-dir /user/hive/warehouse/retail_stage.db --as-avrodatafile
+
+
+
+
+
+select * from orders_sqoop as x where x.order_date in (select y.order_date from (select z.order_date,count(1) as total_order from orders_sqoop as z group by z.order_date order by total_order desc limit 1) as y);
