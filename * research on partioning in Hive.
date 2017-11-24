@@ -1,0 +1,146 @@
+* research on partioning in Hive.
+
+external table
+set hive.enforce.bucketing = true; 
+
+create  table partition_buckettest3( order_id Int,order_date String,order_customer_id Int) partitioned by (order_status String)  clustered by (order_id) into 4 buckets;
+
+insert into table partition_buckettest3 partition(order_status) select order_id,order_date,order_customer_id,order_status from orders;
+
+alter table partition_test1 add partition(order_status="Agam")
+
+alter table partition_test1 drop partition(order_status="Agam")
+
+*Election analysis problem with Spark
+
+* using RDD API
+
+val data = sc.textFile("/user/cloudera/electionanalysis/electiondata.tab")
+* architecture of data
+
+Array(state,0	constituency,1	candidate_name,2	sex,3	age,4	category,5	partyname,6	partysymbol,7	general,8	postal,9	total,10	pct_of_total_votes,11	pct_of_polled_votes,12	totalvoters,13)
+
+* getting rid of header
+
+
+val updata = data.mapPartitionsWithIndex((idx,itr)=>(if(idx==0) itr.drop(1) else itr))
+
+*filtering data of UP
+
+val updatafiltered=updata.filter(x=>(x.split("\\t")(0)=="Uttar Pradesh"))
+
+val updatamap=updatafiltered.map(x=>{var d=x.split("\\t");((d(0),d(1)),(d(6),d(10).toInt))})
+
+val updatamapGBK = updatamap.groupByKey()
+
+* here the output RDD will be a tuple of  string and Iterable***************************
+
+*so on iterable map function is  working please see the experiments but it is not good practice*********************
+
+ def recalculate(r:Iterable[(String,Int)]):Iterable[(String,Int)]={ 
+     | r.map(r=>(
+     | if(r._1 == "INC"|| r._1 == "SP") 
+     | ("Ally",r._2) 
+     |      else 
+     | r)).groupBy(r=>r._1).map(x=>(x._1,x._2.map(r=>r._2).sum))}
+
+
+
+	val finalresult3way = updatamapGBK.map(x=>(x._1,recalculate(x._2))).map(x=>(x._1._1,x._2.toList.sortBy(r=> -r._2)))
+
+****experiments*******************************************************************************************
+
+updatamapGBK.flatMap(x=>(x._1,x._2.map(r=>(r._1,r._2)).groupBykey()))
+
+updatamapGBK.flatMap(x=>(x._1,x._2.map(r=>(r._1,r._2))))
+
+updatamapGBK.map(x=>(x._1,x._2.toList.map(r=>(if (r._1=="INC"||r._1=="SP") ("ALLY",r._2) else r)).groupBy(r=>r._1)))
+
+updatamapGBK.flatMap{case(key, list) => list.map(item => ((key,item._1), item._2))}
+   .reduceByKey(_+_)
+   .map{case((key,name),hours) => (key, List((name, hours)))}
+  .reduceByKey(_++_)
+}
+
+
+val i =List(("BSP",213792), ("BJP",575889), ("SP",385422), ("INC",84089), ("AAAP",5536), ("ARWP",2029), ("RrSP",4215), ("PECP",1819), ("sHS",2121), ("IND",2036), ("IND",2605), ("IND",2727), ("IND",4522), ("IND",8600), ("IND",11443), ("NOTA",13959))
+
+i.map(r=>{(if (r._1=="INC"|| r._1=="SP") ("Ally",r._2) else r)}).groupBy(r=>r._1).map(x=>(x._1,x._2.map(r=>r._2).sum))
+
+val k =updatamapGBK.map(x=>(x._1,x._2.map(r=>(if (r._1=="INC"||r._1=="SP") ("ALLY",r._2) else r))))
+
+
+*****Mindtree-questions**********************************************************************
+*********************counting no. of words just before comma(,)******************************
+
+apporach-1
+
+val csvFile = sc.textFile("/user/cloudera/text").mapPartitionsWithIndex((idx,itr)=>(if(idx==0) itr.drop(1) else itr))
+
+val csvFile2 = csvFile.map(line => line.split(","))
+
+val t = csvFile2.map(x=>x(0))
+
+val finalcountbeforecomma = t.flatMap(x=>x.split(" ")).count
+
+*********playing around data of movie*****************************
+/** Count up how many of each star rating exists in the MovieLens 100K data set. */
+//*********** (The file format is userID, movieID, rating, timestamp)************
+
+val data = sc.textFile("/user/cloudera/movieanalysis").map(x=>(x.split("\t")(2),1).reduceBykey(_+_)
+
+*******************Datametica questions***************
+*******Hive Questions
+create table order_partition
+    (
+     order_id Int,
+     order_customer_id Int,
+     order_status String)
+     partitioned by (order_date String);
+
+******Experiment 1***************************************************************************************
+Insert overwrite table order_partition partition (order_date)
+select order_id,order_customer_id,order_status,to_date(from_unixtime(cast order_date/100 as bigint)) from orders distribute by order_date limit 100;
+
+*******Experiment 2 *************************************************************************************
+*************************from_unixtime take input as bigint and convert it into String ,is used when time is in number, usually happens after 
+join*********************to_date convert it in date , so that it will consider as date otherwise it will used as only string********************
+
+Insert overwrite table order_partition partition (order_date)
+
+select order_id,order_customer_id,order_status,to_date(order_date) from orders  limit 100;
+
+*****Lateral view*******************
+these are used to view data in nested datatypes o hive like MAP,STruct,ARAAY.
+
+Syntax:-select mycol1 from basetable LATERAL VIEW explode(col1) mytab as mycol1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
