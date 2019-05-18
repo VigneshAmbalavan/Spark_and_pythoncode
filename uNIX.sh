@@ -10,7 +10,7 @@ cd "`dirname "${SCRIPT_HOME}"`" > /dev/null
 SCRIPT_HOME="`pwd`";
 popd  > /dev/null
 
-
+###test_git6
 
 source ${SCRIPT_HOME}/../config/custom_onboarding_ip_matching_bash.properties
 export SPARK_MAJOR_VERSION=2
