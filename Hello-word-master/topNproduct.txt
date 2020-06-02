@@ -1,0 +1,17 @@
+
+
+
+
+
+
+
+
+val productjoincategoriesmap=productjoincategories.map(x=>(x._2._2,x._2._1))
+
+val productjoincategoriesgroupby = productjoincategoriesmap.groupByKey()
+
+
+def topNproduct(x:(String,Iterable[String]),topN:Int): Iterable[(String,String)]={
+     | x._2.toList.sortBy(k => -k.split(",")(3).toFloat).take(topN).map(r => (x._1,r))}
+
+val finalresult = productjoincategoriesgroupby.flatMap(x=>(topNproduct(x,3)))
