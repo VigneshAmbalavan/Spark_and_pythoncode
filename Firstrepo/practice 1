@@ -1,0 +1,38 @@
+create external table orders3(
+orders_id String,
+orders_date String,
+orders_price Int,
+orders_status String)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+stored as sequencefile
+LOCATION "/user/cloudera/problem6/sequence";
+
+Average in Dataframes;
+find average product price in each category.
+
+*creating the RDD
+
+val products = sc.textFile("/user/cloudera/alltable/products")
+
+*creating the case class
+ 
+case class productcase( 
+product_id:Integer, 
+product_category_id:Integer,
+product_name:String,
+product_description:String, 
+product_price:Float, 
+product_image: String 
+)
+
+*creating Dataframes
+val product1=products.map(x=>{var d = x.split(",");(d(0).toInt,d(1).toInt,d(2),d(3),d(4).toFloat,d(5))})
+
+val productsdf=product1.map(d=>productcase(d._1,d._2,d._3,d._4,d._5,d._6)).toDF()
+
+*calculating Average categorywise
+
+val finalresult = productsdf.groupBy(col("product_category_id")).agg(avg(col("product_price")) alias ("avg_price"))
+
+
+
